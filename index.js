@@ -50,10 +50,10 @@ async function run() {
   try {
   
     await client.connect();
-    const db = client.db('habitTrackerDB');
-    const habitCollection = db.collection('habits');
+    const db = client.db('ChabitTrackerDB');
+    const challangesCollection = db.collection('challanges');
     const userCollection = db.collection('users');
-    app.locals.habitCollection = habitCollection;
+    app.locals.challangesCollection = challangesCollection;
     app.locals.userCollection = userCollection;
 
     console.log("Successfully connected to MongoDB!");
@@ -61,7 +61,7 @@ async function run() {
 
     
 
-    app.get('/', (req, res) => res.send('Habit Tracker Server is running!'));
+    app.get('/', (req, res) => res.send('Challange Tracker Server is running!'));
     app.post('/users', async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -72,54 +72,54 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
-    app.get('/habits/featured', async (req, res) => {
-        const featuredHabits = await habitCollection.find().sort({ createdAt: -1 }).limit(6).toArray();
-        res.send(featuredHabits);
+    app.get('/challanges/featured', async (req, res) => {
+        const featuredChallanges = await challangesCollection.find().sort({ createdAt: -1 }).limit(6).toArray();
+        res.send(featuredChallanges);
     });
-    app.get('/habits', async (req, res) => {
+    app.get('/challanges', async (req, res) => {
         const category = req.query.category;
         const searchTerm = req.query.search;
         let query = {};
         if (category) query.category = category;
         if (searchTerm) query.title = { $regex: searchTerm, $options: 'i' };
-        const habits = await habitCollection.find(query).toArray();
-        res.send(habits);
+        const challanges = await challangesCollection.find(query).toArray();
+        res.send(challanges);
     });
 
 
-    app.post('/habits', verifyToken, async (req, res) => {
+    app.post('/challanges', verifyToken, async (req, res) => {
         const habitData = req.body;
         if (req.decodedEmail !== habitData.userEmail) {
            return res.status(403).send({ message: 'Token email does not match user email.' });
         }
-        habitData.createdAt = new Date(); 
-        habitData.completionHistory = []; 
-        const result = await habitCollection.insertOne(habitData);
+        challangesData.createdAt = new Date(); 
+        challangesData.completionHistory = []; 
+        const result = await challangesCollection.insertOne(challangesData);
         res.send(result);
     });
-    app.get('/habits/:email', verifyToken, async (req, res) => {
+    app.get('/challanges/:email', verifyToken, async (req, res) => {
         if (req.decodedEmail !== req.params.email) {
             return res.status(403).send({ message: 'Unauthorized access' });
         }
-        const userHabits = await habitCollection.find({ userEmail: req.params.email }).toArray();
-        res.send(userHabits);
+        const userChallanges = await challangesCollection.find({ userEmail: req.params.email }).toArray();
+        res.send(userChallanges);
     });
-    app.get('/habit/:id', verifyToken, async (req, res) => {
-        const habit = await habitCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (!habit) return res.status(404).send({ message: 'Habit not found' });
-        res.send(habit);
+    app.get('/challanges/:id', verifyToken, async (req, res) => {
+        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!challange) return res.status(404).send({ message: 'Challange not found' });
+        res.send(challange);
     });
-    app.delete('/habits/:id', verifyToken, async (req, res) => {
-        const habit = await habitCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (!habit) return res.status(404).send({ message: 'Habit not found' });
-        if (habit.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
-        const result = await habitCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+    app.delete('/challanges/:id', verifyToken, async (req, res) => {
+        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!challange) return res.status(404).send({ message: 'Challange not found' });
+        if (challange.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
+        const result = await challangesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
         res.send(result);
     });
-    app.patch('/habits/:id', verifyToken, async (req, res) => {
-        const habit = await habitCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (!habit) return res.status(404).send({ message: 'Habit not found' });
-        if (habit.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
+    app.patch('/challanges/:id', verifyToken, async (req, res) => {
+        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!challange) return res.status(404).send({ message: 'Challange not found' });
+        if (challange.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
         const updatedData = req.body;
         const updateDoc = {
             $set: {
@@ -130,12 +130,12 @@ async function run() {
                 image: updatedData.image,
             },
         };
-        const result = await habitCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
+        const result = await challangesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
         res.send(result);
     });
-    app.patch('/habits/complete/:id', verifyToken, async (req, res) => {
-        const habit = await habitCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (!habit) return res.status(404).send({ message: 'Habit not found' });
+    app.patch('/challanges/complete/:id', verifyToken, async (req, res) => {
+        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!challange) return res.status(404).send({ message: 'Challange not found' });
         if (habit.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
         
         const today = new Date();
@@ -146,16 +146,16 @@ async function run() {
             return entryDate.getTime() === today.getTime();
         });
         if (alreadyCompleted) {
-            return res.send({ message: 'Habit already completed today.', modifiedCount: 0 });
+            return res.send({ message: 'Challange already completed today.', modifiedCount: 0 });
         }
         const updateDoc = { $push: { completionHistory: { date: new Date() } } };
-        const result = await habitCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
+        const result = await challangesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
         res.send(result);
     });
 
     
     app.listen(port, () => {
-      console.log(`Habit Tracker Server is running on port: ${port}`);
+      console.log(`Challange Tracker Server is running on port: ${port}`);
     });
 
   } catch (error) {
