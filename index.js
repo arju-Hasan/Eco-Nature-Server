@@ -50,10 +50,10 @@ async function run() {
   try {
   
     await client.connect();
-    const db = client.db('ChabitTrackerDB');
-    const challangesCollection = db.collection('challanges');
+    const db = client.db('ChallengesTrackerDB');
+    const challengesCollection = db.collection('challenges');
     const userCollection = db.collection('users');
-    app.locals.challangesCollection = challangesCollection;
+    app.locals.challengesCollection = challengesCollection;
     app.locals.userCollection = userCollection;
 
     console.log("Successfully connected to MongoDB!");
@@ -72,52 +72,57 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
-    app.get('/challanges/featured', async (req, res) => {
-        const featuredChallanges = await challangesCollection.find().sort({ createdAt: -1 }).limit(6).toArray();
-        res.send(featuredChallanges);
+    app.get('/challenges/featured', async (req, res) => {
+        const featuredchallenges = await challengesCollection.find().sort({ createdAt: -1 }).limit(6).toArray();
+        res.send(featuredchallenges);
     });
-    app.get('/challanges', async (req, res) => {
+    app.get('/challenges', async (req, res) => {
         const category = req.query.category;
         const searchTerm = req.query.search;
         let query = {};
         if (category) query.category = category;
         if (searchTerm) query.title = { $regex: searchTerm, $options: 'i' };
-        const challanges = await challangesCollection.find(query).toArray();
-        res.send(challanges);
+        const challenges = await challengesCollection.find(query).toArray();
+        res.send(challenges);
     });
 
 
-    app.post('/challanges', verifyToken, async (req, res) => {
-        const habitData = req.body;
-        if (req.decodedEmail !== habitData.userEmail) {
+    app.post('/challenges', verifyToken, async (req, res) => {
+        const challengesData = req.body;
+        if (req.decodedEmail !== challengesData.userEmail) {
            return res.status(403).send({ message: 'Token email does not match user email.' });
         }
-        challangesData.createdAt = new Date(); 
-        challangesData.completionHistory = []; 
-        const result = await challangesCollection.insertOne(challangesData);
-        res.send(result);
+        challengesData.createdAt = new Date(); 
+        challengesData.completionHistory = []; 
+        const result = await challengesCollection.insertOne(challengesData);
+        // res.send(result);
+        res.send({ insertedId: result.insertedId });
+
     });
-    app.get('/challanges/:email', verifyToken, async (req, res) => {
+
+
+
+    app.get('/challenges/user/:email', verifyToken, async (req, res) => {
         if (req.decodedEmail !== req.params.email) {
             return res.status(403).send({ message: 'Unauthorized access' });
         }
-        const userChallanges = await challangesCollection.find({ userEmail: req.params.email }).toArray();
-        res.send(userChallanges);
+        const userchallenges = await challengesCollection.find({ userEmail: req.params.email }).toArray();
+        res.send(userchallenges);
     });
-    app.get('/challanges/:id', verifyToken, async (req, res) => {
-        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+    app.get('/challenges/id/:id', verifyToken, async (req, res) => {
+        const challange = await challengesCollection.findOne({ _id: new ObjectId(req.params.id) });
         if (!challange) return res.status(404).send({ message: 'Challange not found' });
         res.send(challange);
     });
-    app.delete('/challanges/:id', verifyToken, async (req, res) => {
-        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+    app.delete('/challenges/id/:id', verifyToken, async (req, res) => {
+        const challange = await challengesCollection.findOne({ _id: new ObjectId(req.params.id) });
         if (!challange) return res.status(404).send({ message: 'Challange not found' });
         if (challange.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
-        const result = await challangesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        const result = await challengesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
         res.send(result);
     });
-    app.patch('/challanges/:id', verifyToken, async (req, res) => {
-        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+    app.patch('/challenges/id/:id', verifyToken, async (req, res) => {
+        const challange = await challengesCollection.findOne({ _id: new ObjectId(req.params.id) });
         if (!challange) return res.status(404).send({ message: 'Challange not found' });
         if (challange.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
         const updatedData = req.body;
@@ -130,17 +135,17 @@ async function run() {
                 image: updatedData.image,
             },
         };
-        const result = await challangesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
+        const result = await challengesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
         res.send(result);
     });
-    app.patch('/challanges/complete/:id', verifyToken, async (req, res) => {
-        const challange = await challangesCollection.findOne({ _id: new ObjectId(req.params.id) });
+    app.patch('/challenges/complete/:id', verifyToken, async (req, res) => {
+        const challange = await challengesCollection.findOne({ _id: new ObjectId(req.params.id) });
         if (!challange) return res.status(404).send({ message: 'Challange not found' });
-        if (habit.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
+        if (challange.userEmail !== req.decodedEmail) return res.status(403).send({ message: 'Unauthorized' });
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const alreadyCompleted = habit.completionHistory.some(entry => {
+        const alreadyCompleted = challange.completionHistory.some(entry => {
             const entryDate = new Date(entry.date);
             entryDate.setHours(0, 0, 0, 0);
             return entryDate.getTime() === today.getTime();
@@ -149,7 +154,7 @@ async function run() {
             return res.send({ message: 'Challange already completed today.', modifiedCount: 0 });
         }
         const updateDoc = { $push: { completionHistory: { date: new Date() } } };
-        const result = await challangesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
+        const result = await challengesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
         res.send(result);
     });
 
