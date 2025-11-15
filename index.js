@@ -99,9 +99,20 @@ async function run() {
         res.send({ insertedId: result.insertedId });
 
     });
+// ============ User Challenges =============
+    const userChallengesCollection = db.collection('userchallenges');
+    app.post('/userchallenges', verifyToken, async (req, res) => {
+    const { userId, challengeId } = req.body;
 
+    // check if already joined
+    const existing = await userChallengesCollection.findOne({ userId, challengeId });
+    if (existing) return res.status(409).send({ message: 'Already joined' });
 
-
+    const doc = { ...req.body, joinDate: new Date() };
+    const result = await userChallengesCollection.insertOne(doc);
+    res.send(result);
+});
+// =============
     app.get('/challenges/user/:email', verifyToken, async (req, res) => {
         if (req.decodedEmail !== req.params.email) {
             return res.status(403).send({ message: 'Unauthorized access' });
