@@ -62,16 +62,44 @@ async function run() {
     
 
     app.get('/', (req, res) => res.send('Challange Tracker Server is running!'));
+
+    // app.post('/users', async (req, res) => {
+    //   const user = req.body;
+    //   const query = { email: user.email };
+    //   const existingUser = await userCollection.findOne(query);
+    //   if (existingUser) {
+    //     return res.send({ message: 'User already exists', insertedId: null });
+    //   }
+    //   const result = await userCollection.insertOne(user);
+    //   res.send(result);
+    // });
+
     app.post('/users', async (req, res) => {
-      const user = req.body;
-      const query = { email: user.email };
-      const existingUser = await userCollection.findOne(query);
-      if (existingUser) {
-        return res.send({ message: 'User already exists', insertedId: null });
-      }
-      const result = await userCollection.insertOne(user);
-      res.send(result);
-    });
+  const user = req.body;
+  const query = { email: user.email };
+  const existingUser = await userCollection.findOne(query);
+  if (existingUser) {
+    return res.send({ message: 'User already exists', insertedId: null });
+  }
+  const result = await userCollection.insertOne(user);
+  res.send(result);
+});
+
+
+//  
+//     app.post('/users', async (req, res) => {
+//   const user = req.body;
+//   const query = { email: user.email };
+//   const existingUser = await userCollection.findOne(query);
+//   if (existingUser) {
+//     return res.send({ message: 'User already exists', insertedId: null });
+//   }
+//   const result = await userCollection.insertOne(user);
+//   res.send(result);
+// });
+
+
+
     app.get('/challenges/featured', async (req, res) => {
         const featuredchallenges = await challengesCollection.find().sort({ createdAt: -1 }).limit(6).toArray();
         res.send(featuredchallenges);
@@ -102,17 +130,51 @@ async function run() {
 // ============ User Challenges =============
     const userChallengesCollection = db.collection('userchallenges');
     app.post('/userchallenges', verifyToken, async (req, res) => {
-    const { userId, challengeId } = req.body;
+//       const existing = await userChallengesCollection.findOne({
+//         userId,
+//         challengeId: new ObjectId(challengeId)
+//       });
+// 
+//     if (existing) return res.status(409).send({ message: 'Already joined' });
+// 
+//     const doc = { ...req.body, joinDate: new Date() };
+//     const result = await userChallengesCollection.insertOne(doc);
+//     res.send(result);
+// });
+// // ============= user Challenges End =============
+// app.post("/userchallenges", async (req, res) => {
+  try {
+    const { userId, challengeId, status, progress, joinDate } = req.body;
 
-    // check if already joined
-    const existing = await userChallengesCollection.findOne({ userId, challengeId });
-    if (existing) return res.status(409).send({ message: 'Already joined' });
+    const query = {
+      userId,
+      challengeId: new ObjectId(challengeId),
+    };
 
-    const doc = { ...req.body, joinDate: new Date() };
+    // Already joined?
+    const exists = await userChallengesCollection.findOne(query);
+    if (exists) {
+      return res.status(409).send({ message: "already joined" });
+    }
+
+    const doc = {
+      userId,
+      challengeId: new ObjectId(challengeId),
+      status,
+      progress,
+      joinDate: new Date(joinDate),
+    };
+
     const result = await userChallengesCollection.insertOne(doc);
     res.send(result);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "Failed to join challenge" });
+  }
 });
-// =============
+
+// ============================
     app.get('/challenges/user/:email', verifyToken, async (req, res) => {
         if (req.decodedEmail !== req.params.email) {
             return res.status(403).send({ message: 'Unauthorized access' });
@@ -144,6 +206,7 @@ async function run() {
                 category: updatedData.category,
                 reminderTime: updatedData.reminderTime,
                 image: updatedData.image,
+                participants: updatedData.participants,    // this line was missing before add 
             },
         };
         const result = await challengesCollection.updateOne({ _id: new ObjectId(req.params.id) }, updateDoc);
