@@ -174,7 +174,23 @@ async function run() {
   }
 });
 
-// ============================
+
+//================= get user challenges ==============
+app.get("/userchallenges/:email", async (req, res) => {
+  const email = req.params.email;
+
+  try {
+    const result = await userChallengesCollection
+      .find({ userId: email })
+      .toArray();
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ error: "Failed to load user's challenges" });
+  }
+});
+
+// ==========================
     app.get('/challenges/user/:email', verifyToken, async (req, res) => {
         if (req.decodedEmail !== req.params.email) {
             return res.status(403).send({ message: 'Unauthorized access' });
