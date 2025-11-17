@@ -309,7 +309,8 @@ const handleUpvote = async () => {
 
   try {
     const response = await axios.patch(
-      `http://localhost:3000/api/eco-tips/${_id}/upvote`,
+      // `http://localhost:3000/api/eco-tips/${_id}/upvote`,
+      `/api/eco-tips/${_id}/upvote`,
       { email: userEmail },
       { headers: { "Content-Type": "application/json" } }
     );
