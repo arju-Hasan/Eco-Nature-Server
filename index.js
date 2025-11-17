@@ -9,12 +9,9 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// mongoDB URI and Client 
-// const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.tachgq7.mongodb.net/?appName=Cluster0`;
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@econature.eb2s0v0.mongodb.net/?appName=EcoNature`;
-
-
 
 
 
@@ -37,8 +34,6 @@ app.get('/', (req, res) => {
 async function run() {
   try {
 
-    // All collection and Database
-    // const db = client.db("assignment-B12A10");
     const db = client.db("EcoTrackerDB");
     const usersCollection  = db.collection("users");
     const challengesCollection = db.collection("challenges");
@@ -251,7 +246,6 @@ app.get('/api/joined-events/:challengeId', async (req, res) => {
     });
 
     // EcoTips Collection 
-    // EcoTips Collection 
 app.get('/api/eco-tips', async (req, res) => {
   const cursor = ecoTipsCollection.find();
   const result = await cursor.toArray();
@@ -303,26 +297,6 @@ app.patch('/api/eco-tips/:id/upvote', async (req, res) => {
   }
 });
 
-//     app.get('/api/eco-tips', async (req, res) => {
-//       const cursor = ecoTipsCollection.find();
-//       const result = await cursor.toArray();
-//       res.send(result)
-// 
-//     })
-    //******************************************************** */
-    // PATCH /api/eco-tips/:id/upvote for update recent Tips
-    // app.patch('/api/ecotips/:id/upvote', async (req, res) => {
-    //   try {
-    //     const id = req.params.id;
-    //     const query = { _id: new ObjectId(id) };
-    //     const update = { $inc: { upvotes: 1 }, $set: { updatedAt: new Date() } };
-    //     const result = await ecoTipsCollection.updateOne(query, update);
-    //     res.send(result);
-    //   } catch (error) {
-    //     console.error(error);
-    //     res.status(500).send({ message: "Failed to update upvotes" });
-    //   }
-    // }); 
     // PATCH /api/eco-tips/:id/upvote
 const handleUpvote = async () => {
   if (!userEmail) {
