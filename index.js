@@ -343,7 +343,9 @@ const handleUpvote = async () => {
     // Find single event
     app.get('/api/events/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
+      // console.log(id);
+      // const query = { _id: new ObjectId(id) };
+      const query = { _id: id};
       const result = await eventsCollection.findOne(query);
       res.send(result);
     })
