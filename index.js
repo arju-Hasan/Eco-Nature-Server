@@ -49,12 +49,14 @@ async function run() {
       const newUser = req.body;
       const email = req.body.email;
       const query = { email: email }
-      const existingUser = await usersCollection .findOne(query);
+      const existingUser = await usersCollection 
+      .findOne(query);
       if (existingUser) {
         res.send({ message: 'User already exist, Do not need to insert again.' });
       }
       else {
-        const result = await usersCollection .insertOne(newUser);
+        const result = await usersCollection 
+        .insertOne(newUser);
         res.send(result);
 
       }
@@ -110,6 +112,57 @@ app.get('/api/joined-events/:challengeId', async (req, res) => {
     res.status(500).send({ message: "Server error", error });
   }
 });
+
+// PATCH /api/events/:id/join
+//===============================
+app.patch("/api/events/:id/join", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, location } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Find the event
+    const event = await eventsCollection.findOne({ _id: id });
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if full
+    if (event.currentParticipants >= event.maxParticipants) {
+      return res.status(400).json({ message: "Event is full" });
+    }
+
+    // Initialize joinBy if not exists
+    let joinByArray = Array.isArray(event.joinBy) ? event.joinBy : [];
+
+    // Check duplicate
+    if (joinByArray.includes(email)) {
+      return res.status(400).json({ message: "You already joined this event" });
+    }
+
+    // Add user email to joinBy array & increment currentParticipants
+    joinByArray.push(email);
+
+    await eventsCollection.updateOne(
+      { _id: id },
+      {
+        $set: { joinBy: joinByArray },
+        $inc: { currentParticipants: 1 },
+      }
+    );
+
+    res.json({ message: "Joined successfully" });
+  } catch (error) {
+    console.error("JOIN ERROR:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+//==============================
+
 
     app.get('/api/challenges',  async (req, res) => {
       try {
@@ -253,83 +306,38 @@ app.get('/api/eco-tips', async (req, res) => {
 })
 
 // PATCH /api/eco-tips/:id/upvote
-app.patch('/api/eco-tips/:id/upvote', async (req, res) => {
+app.patch("/api/eco-tips/:id/upvotes", async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+
+  if (!email) {
+    
+    return res.status(400).json({ message: "Email is required" });
+  }
+
   try {
-    const id = req.params.id;
-    const userEmail = req.body.email;
+    const tip = await ecoTipsCollection.findOne({ _id: id });
+    if (!tip) return res.status(404).json({ message: "Tip not found" });
 
-    if (!userEmail) {
-      return res.status(400).send({ success: false, message: "User email required" });
+    if (tip.upvotedBy && tip.upvotedBy.includes(email)) {
+      return res.status(400).json({ message: "Already upvoted" });
     }
 
-    const query = { _id: new ObjectId(id) };
-    const tip = await ecoTipsCollection.findOne(query);
-
-    if (!tip) {
-      return res.status(404).send({ success: false, message: "Tip not found" });
-    }
-
-    if (tip.upvotedBy?.includes(userEmail)) {
-      return res.status(400).send({
-        success: false,
-        message: "Already upvoted"
-      });
-    }
-
-    const result = await ecoTipsCollection.updateOne(
-      query,
+    await ecoTipsCollection.updateOne(
+      { _id: id },
       {
         $inc: { upvotes: 1 },
-        $addToSet: { upvotedBy: userEmail },
-        $set: { updatedAt: new Date() }
+        $addToSet: { upvotedBy: email },
+        $set: { updatedAt: new Date() },
       }
     );
 
-    res.send({
-      success: true,
-      message: "Upvoted successfully",
-      result
-    });
-
-  } catch (error) {
-    console.error("Upvote Error:", error);
-    res.status(500).send({ success: false, message: "Server error" });
+    res.json({ message: "Upvoted successfully" });
+  } catch (err) {
+    console.error("Upvote Error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
-    // PATCH /api/eco-tips/:id/upvote
-const handleUpvote = async () => {
-  if (!userEmail) {
-    toast.error("Please login to upvote!");
-    return;
-  }
-
-  if (isVoting) return;
-  setIsVoting(true);
-
-  try {
-    const response = await axios.patch(
-      // `http://localhost:3000/api/eco-tips/${_id}/upvote`,
-      `/api/eco-tips/${_id}/upvote`,
-      { email: userEmail },
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    if (response.data.success) {
-      setVoteCount(prev => prev + 1);
-      toast.success("Upvoted successfully!");
-    }
-  } catch (error) {
-    if (error.response?.status === 400) {
-      toast.info("You already upvoted this tip!");
-    } else {
-      toast.error("Something went wrong!");
-    }
-  } finally {
-    setIsVoting(false);
-  }
-};
-
 
 //******************************************************* */
     // events Collection 
